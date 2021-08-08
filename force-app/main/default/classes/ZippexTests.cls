@@ -155,7 +155,7 @@ private class ZippexTests {
     );
 
     try {
-      Lead l = new Lead(LastName = 'Test', Company = 'Test');
+      Contact l = new Contact(LastName = 'Test');
       insert l;
 
       Attachment att = new Attachment(
@@ -209,5 +209,30 @@ private class ZippexTests {
       EncodingUtil.convertFromHex(new Puff(source, srclen, null).inflate())
         .toString()
     );
+  }
+
+  @isTest
+  static void contentVersionActionTest() {
+    String testData = 'Lorem ipsum';
+    ContentVersion file1 = new ContentVersion();
+      file1.Title = 'Test';
+      file1.PathOnClient = 'C:\\test.txt';
+      file1.VersionData = Blob.valueOf(testData);
+      insert file1;
+    ContentVersion file2 = new ContentVersion();
+      file2.Title = 'Second File';
+      file2.PathOnClient = 'C:\\secondfile.xml';
+      file2.VersionData = Blob.valueOf(testData);
+      insert file2;
+    List<String> testIds = new List<String>();
+    testIds.add(file1.Id);
+    testIds.add(file2.Id);
+    List<ZippexAction.ZippexInput> inputs = new List<ZippexAction.ZippexInput>();
+    inputs.add(new ZippexAction.ZippexInput());
+    inputs[0].contentVersionIds = testIds;
+    inputs[0].fileName = 'test.zip';
+    inputs[0].targetEmail = 'testing@summerlin.co';
+    List<String> outputZip = ZippexAction.downloadContentVersionList(inputs);
+    System.debug(outputZip);
   }
 }

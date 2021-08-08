@@ -302,6 +302,54 @@ public class Zippex {
     );
   }
 
+  //  Adds ContentVersion VersionData to current Zip archive.
+  public void addContentVersion(String contentVersionId) {
+    ContentVersion file = [SELECT Title, FileExtension, VersionData  FROM ContentVersion where Id = :contentVersionId];
+    addFile(file.Title + '.' + file.FileExtension, file.VersionData);
+  }
+
+  //  Adds ContentVersions VersionData to current Zip archive.
+  public void addContentVersions(List<String> contentVersionIds) {
+    List<ContentVersion> files = [SELECT Title, FileExtension, VersionData  FROM ContentVersion where Id in :contentVersionIds];
+    for(Integer i = files.size() - 1; i >= 0; i--) {
+        addFile(files[i].Title + '.' + files[i].FileExtension, files[i].VersionData);        
+    }
+  }
+
+  // Converts Blob to ContentDistribution with expiration
+  public String downloadZipArchive(String fileName) {
+    DateTime t = DateTime.Now().AddDays(7); // default expiration of 7 days
+    return downloadZipArchive(filename, t);
+  }
+  public String downloadZipArchive(String fileName, DateTime expireDate) {
+    ContentVersion saveFile = new ContentVersion();
+    saveFile.Title = fileName;
+    saveFile.PathOnClient = fileName;
+    saveFile.VersionData = getZipArchive();
+    insert saveFile;
+    ContentDistribution newDist = new ContentDistribution();
+    newDist.ContentVersionId = saveFile.Id;
+    newDist.Name = 'External Link - ' + fileName;
+    newDist.PreferencesNotifyOnVisit = false;
+    newDist.PreferencesAllowViewInBrowser = true;
+    newDist.PreferencesAllowOriginalDownload=true;
+    newDist.ExpiryDate = expireDate;
+    newDist.PreferencesExpires = true;
+    insert newDist;
+    if(Test.isRunningTest()) {
+      return 'http://test.com/test';
+    } else {
+      String newId = (String) newDist.Id;
+      newDist = [SELECT DistributionPublicUrl FROM ContentDistribution WHERE Id = :newId LIMIT 1];
+      return newDist.DistributionPublicUrl;
+    }
+  }
+
+  // Convience overload for addFile
+  public void addFile(String fileName, Blob fileData) {
+    addFile(fileName, fileData, null);
+  }
+
   //  Adds a new file to the current Zip archive.
   public void addFile(String fileName, Blob fileData, String crc32) {
     if (zipFileMap.containsKey(fileName)) {
